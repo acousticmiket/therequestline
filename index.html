@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Acoustic Mike T — Song Requests</title>
+  <meta name="description" content="Scroll the setlist and tap a song to text your request to Acoustic Mike T." />
+  <style>
+    :root { --bg:#0f1020; --card:#181a2f; --text:#f6f7fb; --muted:#b6b8c9; }
+    * { box-sizing:border-box }
+    body { margin:0; background:radial-gradient(1200px 600px at 20% -10%,#1f2250,transparent),var(--bg);
+           color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+           min-height:100vh; display:flex; flex-direction:column; align-items:center; }
+    header { width:100%; max-width:900px; padding:24px 16px 8px; }
+    .title { font-size:clamp(1.4rem,2.5vw,2rem); margin:0 0 6px; }
+    .subtitle { margin:0; color:var(--muted); font-size:.98rem; }
+    .links { margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; }
+    .links a { color:var(--text); text-decoration:none; background:#202345; border:1px solid #2d3160;
+               padding:8px 12px; border-radius:999px; font-weight:600; }
+    .container { width:100%; max-width:900px; padding:8px 16px 24px; flex:1; display:flex; flex-direction:column; gap:12px; }
+    .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    #q { flex:1; min-width:220px; padding:14px 16px; font-size:1rem; border-radius:12px;
+         border:1px solid #2b2f57; background:#141630; color:var(--text); outline:none; }
+    .count { color:var(--muted); font-size:.9rem; white-space:nowrap; }
+    ul#songs { list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+    .song { background:linear-gradient(180deg,var(--card),#15172b); border:1px solid #23264b; border-radius:14px; padding:14px 16px;
+             display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .meta { display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .song-title { font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .song-artist { color:var(--muted); font-size:.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    button.req { appearance:none; border:1px solid #2d3160; background:#22254a; color:var(--text);
+                 padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:700; }
+    footer { color:var(--muted); padding:24px 16px; text-align:center; }
+    .empty { color:var(--muted); padding:16px 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 class="title">Acoustic Mike T — Song Requests</h1>
+    <p class="subtitle">Scroll, find a song, and we’ll open a text to Mike with your request.</p>
+    <div class="links">
+      <a href="https://instagram.com/acousticmiket" target="_blank" rel="noopener">Instagram @acousticmiket</a>
+      <a href="https://facebook.com/acousticmiket" target="_blank" rel="noopener">Facebook /acousticmiket</a>
+      <a href="https://venmo.com/u/Mike-Tesler" target="_blank" rel="noopener">Tip on Venmo @Mike-Tesler</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="controls">
+      <input id="q" type="search" placeholder="Search by title or artist…" autocomplete="off" />
+      <span class="count" id="count"></span>
+    </div>
+    <ul id="songs" aria-live="polite"></ul>
+    <div class="empty" id="empty" style="display:none;">No matching songs.</div>
+  </div>
+
+  <footer>
+    <small>If SMS doesn’t open on your device, the request text is pre-filled—just paste it into a text to +15165211009.</small>
+  </footer>
+
+  <script>
+    // Sorted A→Z by Title
+    const ITEMS = [
+  {"artist":"Adele","title":"(Make You) Feel My Love"},
+  {"artist":"The Proclaimers","title":"500 Miles"},
+  {"artist":"Wallflowers","title":"6th Ave Heartache"},
+  {"artist":"Tommy Tutone","title":"867-5309 (Jenny)"},
+  {"artist":"Johnny Cash","title":"A Boy Named Sue"},
+  {"artist":"Beatles","title":"A Day in the Life"},
+  {"artist":"Beatles","title":"A Hard Day's Night"},
+  {"artist":"Erasure","title":"A Little Respect"},
+  {"artist":"Temptations","title":"Ain't Too Proud to Beg"},
+  {"artist":"Pearl Jam","title":"Alive"},
+  {"artist":"Jimi Hendrix","title":"All Along the Watchtower"},
+  {"artist":"Sister Hazel","title":"All for You"},
+  {"artist":"Kid Rock","title":"All Summer Long"},
+  {"artist":"Blink 182","title":"All The Small Things"},
+  {"artist":"Eagles","title":"Already Gone"},
+  {"artist":"Tom Petty","title":"American Girl"},
+  {"artist":"Kenny Chesney","title":"American Kids"},
+  {"artist":"Don McLean","title":"American Pie"},
+  {"artist":"Pure Prairie League","title":"Amie"},
+  {"artist":"Roling Stones","title":"Angie"},
+  {"artist":"Dave Matthews","title":"Ants Marching"},
+  {"artist":"Journey","title":"Anyway You Want it"},
+  {"artist":"Bruce Springsteen","title":"Atlantic City"},
+  {"artist":"The Who","title":"Baba O'Reilly (Teenage Wasteland)"},
+  {"artist":"Led Zeppelin","title":"Babe, I'm Gonna Leave You"},
+  {"artist":"Beatles","title":"Back in the USSR"},
+  {"artist":"Bad Company","title":"Bad Company"},
+  {"artist":"Donna Summer","title":"Bad Girls"},
+  {"artist":"CCR","title":"Bad Moon Rising"},
+  {"artist":"Gerry Rafferty","title":"Baker Street"},
+  {"artist":"Green Day","title":"Basket Case"},
+  {"artist":"Rolling Stones","title":"Beast of Burden"},
+  {"artist":"Kenny Chesney","title":"Beer in Mexico"},
+  {"artist":"Eric Clapton","title":"Before You Accuse Me"},
+  {"artist":"The Who","title":"Behind Blue Eyes"},
+  {"artist":"KISS","title":"Beth"},
+  {"artist":"Jack Johnson","title":"Better Together"},
+  {"artist":"Michael Jackson","title":"Billie Jean"},
+  {"artist":"Violent Femmes","title":"Blister in the Sun"},
+  {"artist":"Elvis Presley","title":"Blue Suede Shoes"},
+  {"artist":"CCR","title":"Born on the Bayou"},
+  {"artist":"Don Henley","title":"Boys of Summer"},
+  {"artist":"Looking Glass","title":"Brandy"},
+  {"artist":"Tom Petty","title":"Breakdown"},
+  {"artist":"Deep Blue Something","title":"Breakfast @ Tiffany's"},
+  {"artist":"Chris Stapleton","title":"Broken Halos"},
+  {"artist":"Van Morrison","title":"Brown Eyed Girl"},
+  {"artist":"NSYNC","title":"Bye Bye Bye"},
+  {"artist":"Blind Faith","title":"Can't Find My Way Home"},
+  {"artist":"Marshall Tucker","title":"Can't You See"},
+  {"artist":"Dispatch","title":"Carry You"},
+  {"artist":"Grateful Dead","title":"Casey Jones"},
+  {"artist":"Ed Sheeran","title":"Castle on the Hill"},
+  {"artist":"J Geils Band","title":"Centerfold"},
+  {"artist":"Jimmy Buffet","title":"Cheeseburger in Paradise"},
+  {"artist":"Zac Brown","title":"Chicken Fried"},
+  {"artist":"Amos Lee","title":"Chill in the Air"},
+  {"artist":"U2","title":"Christmas (Baby Please Come Home)"},
+  {"artist":"Shilelagh Law","title":"Christmas in New York"},
+  {"artist":"Semisonic","title":"Closing Time"},
+  {"artist":"Eric Clapton/Cream","title":"Cocaine"},
+  {"artist":"Johnny Cash","title":"Cocaine Blues"},
+  {"artist":"Nirvana","title":"Come As You Are"},
+  {"artist":"Luke Bryan","title":"Country Girl"},
+  {"artist":"John Denver","title":"Country Road (West Virginia)"},
+  {"artist":"Ray LaMontagne","title":"Crazy"},
+  {"artist":"Jason Aldean","title":"Crazy Town"},
+  {"artist":"Elton John","title":"Crocodile Rock"},
+  {"artist":"Eric Clapton/Cream","title":"Crossroads"},
+  {"artist":"Nick Lowe","title":"Cruel to Be Kind"},
+  {"artist":"Seven Mary Three","title":"Cumbersome"},
+  {"artist":"Bryan Adams","title":"Cuts Like a Knife"},
+  {"artist":"Rolling Stones","title":"Dead Flowers"},
+  {"artist":"Bon Jovi","title":"Dead or Alive"},
+  {"artist":"Traffic","title":"Dear Mr. Fantasy"},
+  {"artist":"Eagles","title":"Desperado"},
+  {"artist":"Michael Jackson","title":"Dirty Diana"},
+  {"artist":"Little Feat","title":"Dixie Chicken"},
+  {"artist":"Beatles","title":"Don't Let Me Down"},
+  {"artist":"Journey","title":"Don't Stop Believin"},
+  {"artist":"Alice in Chains","title":"Down in a Hole"},
+  {"artist":"CCR","title":"Down on the Corner"},
+  {"artist":"Men at Work","title":"Down Under"},
+  {"artist":"Billy Joel","title":"Downeaster Alexa"},
+  {"artist":"John Mayer","title":"Dreaming with a Broken Heart"},
+  {"artist":"Dobie Gray","title":"Drift Away"},
+  {"artist":"Train","title":"Drops of Jupiter"},
+  {"artist":"Beatles","title":"Eight Days a Week"},
+  {"artist":"Beatles","title":"Eleanor Rigby"},
+  {"artist":"Jay-Z","title":"Empire State of Mind"},
+  {"artist":"Foo Fighters","title":"Everlong"},
+  {"artist":"Rod Stewart","title":"Every Picture Tells a Story"},
+  {"artist":"Poison/Bret Michaels","title":"Every Rose Has Its Thorn"},
+  {"artist":"Queen","title":"Fat Bottomed Girls"},
+  {"artist":"Bad Company","title":"Feel Like Makin Love"},
+  {"artist":"Adele/Bob Dylan","title":"Feel My Love"},
+  {"artist":"Steve Miller","title":"Fly Like An Eagle"},
+  {"artist":"Frank Sinatra","title":"Fly Me to the Moon"},
+  {"artist":"Johnny Cash","title":"Folsom Prison Blues"},
+  {"artist":"Led Zep","title":"Fool in the Rain"},
+  {"artist":"Zac Brown","title":"Free"},
+  {"artist":"Tom Petty","title":"Free Fallin"},
+  {"artist":"Lynyrd Skynyrd","title":"Freebird"},
+  {"artist":"Grateful Dead","title":"Friend of the Devil"},
+  {"artist":"Garth Brooks","title":"Friends in Low Places"},
+  {"artist":"TV Themes","title":"Full House Theme"},
+  {"artist":"Ed Sheeran","title":"Galway Girl"},
+  {"artist":"Beatles","title":"Get Back"},
+  {"artist":"Bob Marley","title":"Get Up Stand Up"},
+  {"artist":"Rolling Stones","title":"Gimme Shelter"},
+  {"artist":"Lynyrd Skynyrd","title":"Gimme Three Steps"},
+  {"artist":"Supertramp","title":"Give a Little Bit"},
+  {"artist":"Bruce Springsteen","title":"Glory Days"},
+  {"artist":"Fleetwood Mac","title":"Go Your Own Way"},
+  {"artist":"Led Zeppelin","title":"Going to California"},
+  {"artist":"One Republic","title":"Good Life"},
+  {"artist":"Green Day","title":"Good Riddance"},
+  {"artist":"Adam Sandler","title":"Hannukah Song"},
+  {"artist":"Beatles","title":"Hard Day's Night"},
+  {"artist":"KISS","title":"Hard Luck Woman"},
+  {"artist":"CCR","title":"Have You Ever Seen the Rain?"},
+  {"artist":"Sam Cooke","title":"Havin a Party"},
+  {"artist":"Eagles","title":"Heartache Tonight"},
+  {"artist":"Beatles","title":"Help!"},
+  {"artist":"Eurythmics","title":"Here Comes the Rain Again"},
+  {"artist":"Beatles","title":"Here Comes the Sun"},
+  {"artist":"Gin Blossoms","title":"Hey Jealousy"},
+  {"artist":"Kip Moore","title":"Hey Pretty Girl"},
+  {"artist":"Train","title":"Hey Soul Sister"},
+  {"artist":"Outkast","title":"Hey Ya!"},
+  {"artist":"Britney Spears","title":"Hit Me Baby (One More Time)"},
+  {"artist":"Lumineers","title":"Ho Hey"},
+  {"artist":"Hootie and The Blowfish","title":"Hold My Hand"},
+  {"artist":"Bob Seger","title":"Hollywood Nights"},
+  {"artist":"Rolling Stones","title":"Honky Tonk Women"},
+  {"artist":"Blue Suede","title":"Hooked on a Feeling"},
+  {"artist":"America","title":"Horse With No Name"},
+  {"artist":"Eagles","title":"Hotel California"},
+  {"artist":"Animals","title":"House of the Rising Sun"},
+  {"artist":"Bruce Springsteen","title":"Hungry Heart"},
+  {"artist":"Duran Duran","title":"Hungry Like the Wolf"},
+  {"artist":"JC Mellencamp","title":"Hurts So Good"},
+  {"artist":"The Who","title":"I Can't Explain"},
+  {"artist":"Luke Bryan","title":"I Don't Want This Night to End"},
+  {"artist":"Beatles","title":"I Feel Fine"},
+  {"artist":"BEP","title":"I Gotta Feeling"},
+  {"artist":"Toby Keith","title":"I Love This Bar"},
+  {"artist":"Flock of Seagulls","title":"I Ran So Far Away"},
+  {"artist":"Johnny Cash","title":"I Walk The Line"},
+  {"artist":"Adam Sandler","title":"I Wanna Grow Old With You"},
+  {"artist":"Backstreet Boys","title":"I Want It That Way"},
+  {"artist":"Michael Jackson/J5","title":"I Want You Back"},
+  {"artist":"Cheap Trick","title":"I Want You to Want Me"},
+  {"artist":"Jason Mraz","title":"I Won't Give Up"},
+  {"artist":"Bon Jovi","title":"I'll Be There For You"},
+  {"artist":"The Monkees","title":"I'm a Believer"},
+  {"artist":"Bruce Springsteen","title":"I'm On Fire"},
+  {"artist":"Jason Mraz","title":"I'm Yours"},
+  {"artist":"Beatles","title":"In My Life"},
+  {"artist":"Eve 6","title":"Inside Out"},
+  {"artist":"Van Morrison","title":"Into the Mystic"},
+  {"artist":"Ringo Starr","title":"It Don't Come Easy"},
+  {"artist":"Alan Jackson","title":"It's 5 O'Clock Somewhere"},
+  {"artist":"Sam Cooke","title":"It's Been a Long Time Comin"},
+  {"artist":"Bon Jovi","title":"It's My Life"},
+  {"artist":"Billy Joel","title":"It's Still Rock & Roll to Me"},
+  {"artist":"JC Mellencamp","title":"Jack and Diane"},
+  {"artist":"Traffic","title":"John Barleycorn Must Die"},
+  {"artist":"Ray Lamontagne","title":"Jolene"},
+  {"artist":"Foreigner","title":"Juke Box Hero"},
+  {"artist":"Zac Brown","title":"Jump Right In"},
+  {"artist":"The Cure","title":"Just Like Heaven"},
+  {"artist":"Bruno Mars","title":"Just the Way You Are"},
+  {"artist":"The Cars","title":"Just What I Needed"},
+  {"artist":"Billy Joel","title":"Keeping the Faith"},
+  {"artist":"Paul Simon","title":"Kodachrome"},
+  {"artist":"Three Doors Down","title":"Kryptonite"},
+  {"artist":"Beatles","title":"Lady Madonna"},
+  {"artist":"James","title":"Laid"},
+  {"artist":"Fleetwood Mac","title":"Landslide"},
+  {"artist":"The Strokes","title":"Last Night"},
+  {"artist":"Beatles","title":"Let It Be"},
+  {"artist":"The Doors","title":"Light My Fire"},
+  {"artist":"Chris Cornell","title":"Like a Stone"},
+  {"artist":"Mumford & Sons","title":"Little Lion Man"},
+  {"artist":"Derek and The Dominoes","title":"Little Wing"},
+  {"artist":"Bon Jovi","title":"Livin' on a Prayer"},
+  {"artist":"The Kinks","title":"Lola"},
+  {"artist":"Billy Squier","title":"Lonely is the Night"},
+  {"artist":"The Cure","title":"Love Song"},
+  {"artist":"War","title":"Low Rider"},
+  {"artist":"Eagles","title":"Lyin' Eyes"},
+  {"artist":"Bush","title":"Machine Head"},
+  {"artist":"Rod Stewart","title":"Maggie May"},
+  {"artist":"Bob Seger","title":"Main Street"},
+  {"artist":"Soggy Bottom Boys","title":"Man of Constant Sorrow"},
+  {"artist":"Jimmy Buffet","title":"Margaritaville"},
+  {"artist":"Paul Simon","title":"Me and Julio"},
+  {"artist":"Police","title":"Message in a Bottle"},
+  {"artist":"Billy Joel","title":"Miami 2017"},
+  {"artist":"Jimmy Eat World","title":"Middle, The"},
+  {"artist":"David Bowie","title":"Modern Love"},
+  {"artist":"Van Morrison","title":"Moondance"},
+  {"artist":"Billy Joel","title":"Movin' Out"},
+  {"artist":"The Killers","title":"Mr. Brightside"},
+  {"artist":"Simon and Garfunkel","title":"Mrs. Robinson"},
+  {"artist":"Jelly Roll","title":"Need a Favor"},
+  {"artist":"Bon Jovi","title":"Never Say Goodbye"},
+  {"artist":"Bob Seger","title":"Night Moves"},
+  {"artist":"Bob Marley","title":"No Woman No Cry"},
+  {"artist":"Beatles","title":"Norwegian Wood"},
+  {"artist":"Beatles","title":"Nowhere Man"},
+  {"artist":"Zach Bryan","title":"Oklahoma Smokeshow"},
+  {"artist":"Willie Nelson","title":"On the Road Again"},
+  {"artist":"U2","title":"One Love"},
+  {"artist":"Allman Bros.","title":"One Way Out"},
+  {"artist":"Billy Joel","title":"Only the Good Die Young"},
+  {"artist":"Lit","title":"Own Worst Enemy"},
+  {"artist":"Rolling Stones","title":"Paint It Black"},
+  {"artist":"Ed Sheeran","title":"Perfect"},
+  {"artist":"Billy Joel","title":"Piano Man"},
+  {"artist":"JC Mellencamp","title":"Pink Houses"},
+  {"artist":"Bastille","title":"Pompeii"},
+  {"artist":"U2","title":"Pride"},
+  {"artist":"Peter, Paul & Mary","title":"Puff the Magic Dragon"},
+  {"artist":"Foster the People","title":"Pumped Up Kicks"},
+  {"artist":"Everlast","title":"Put Your Lights On"},
+  {"artist":"Everlast/Carlos Santana","title":"Put Your Lights On"},
+  {"artist":"Imagine Dragons","title":"Radioactive"},
+  {"artist":"Prince","title":"Raspberry Beret"},
+  {"artist":"Rod Stewart","title":"Reason to Believe"},
+  {"artist":"Billy Idol","title":"Rebel Yell"},
+  {"artist":"Toby Keith","title":"Red Solo Cup"},
+  {"artist":"Bob Marley","title":"Redemption Song"},
+  {"artist":"Tom Petty","title":"Refugee"},
+  {"artist":"Zach Bryan","title":"Revival"},
+  {"artist":"Christopher Cross","title":"Ride Like the Wind"},
+  {"artist":"Dead or Alive","title":"Right Round"},
+  {"artist":"Johnny Cash","title":"Ring of Fire"},
+  {"artist":"Grateful Dead","title":"Ripple"},
+  {"artist":"Bad Company","title":"Rock and Roll Fantasy"},
+  {"artist":"The Stray Cats","title":"Rock This Town"},
+  {"artist":"Bryan Adams","title":"Run to You"},
+  {"artist":"Blues Traveler","title":"Runaround"},
+  {"artist":"Dion","title":"Runaround Sue"},
+  {"artist":"Bon Jovi","title":"Runaway"},
+  {"artist":"Dan Fogelberg","title":"Same old Auld Lang Syne"},
+  {"artist":"Bruce Springsteen","title":"Santa Claus is Comin' to Town"},
+  {"artist":"Chicago","title":"Saturday in the Park"},
+  {"artist":"Jelly Roll","title":"Save Me"},
+  {"artist":"Weezer","title":"Say It Ain't So"},
+  {"artist":"Billy Joel","title":"Scenes from an Italian Restaurant"},
+  {"artist":"Bad Company","title":"Seagull"},
+  {"artist":"Kings Of Leon","title":"Sex on Fire"},
+  {"artist":"Ed Sheeran","title":"Shape of You"},
+  {"artist":"Black Crowes","title":"She Talks to Angels"},
+  {"artist":"Billy Joel","title":"She's Got a Way"},
+  {"artist":"Collective Soul","title":"Shine"},
+  {"artist":"Lynyrd Skynyrd","title":"Simple Man"},
+  {"artist":"Night Ranger","title":"Sister Christian"},
+  {"artist":"America","title":"Sister Golden Hair"},
+  {"artist":"Otis Redding","title":"Sitting on the Dock of the Bay"},
+  {"artist":"Peter Gabriel","title":"Sledgehammer"},
+  {"artist":"Kip Moore","title":"Somethin' Bout a Truck"},
+  {"artist":"Zach Bryan","title":"Something in the Orange"},
+  {"artist":"Artist","title":"Song Name"},
+  {"artist":"David Bowie","title":"Space Oddity (aka \"Major Tom"},
+  {"artist":"The Who","title":"Squeeze Box"},
+  {"artist":"Van Morrison","title":"St. Dominic's Preview"},
+  {"artist":"Ben E. King","title":"Stand By Me"},
+  {"artist":"Sam Smith","title":"Stay With Me"},
+  {"artist":"Bob Marley","title":"Stir it Up"},
+  {"artist":"Wolfe Tones","title":"Streets of New York"},
+  {"artist":"Stealer's Wheel","title":"Stuck in the Middle"},
+  {"artist":"David Bowie","title":"Suffragette City"},
+  {"artist":"Dire Straits","title":"Sultans of Swing"},
+  {"artist":"Seals and Crofts","title":"Summer Breeze"},
+  {"artist":"Bryan Adams","title":"Summer of 69"},
+  {"artist":"U2","title":"Sunday Bloody Sun."},
+  {"artist":"Gordon Lightfoot","title":"Sundown"},
+  {"artist":"Cheap Trick","title":"Surrender"},
+  {"artist":"Elvis Presley","title":"Suspicious Minds"},
+  {"artist":"Neil Diamond","title":"Sweet Caroline"},
+  {"artist":"Aerosmith","title":"Sweet Emotion"},
+  {"artist":"Lynyrd Skynyrd","title":"Sweet Home Alabama"},
+  {"artist":"Allman Bros.","title":"Sweet Melissa"},
+  {"artist":"Rolling Stones","title":"Sympathy for the Devil"},
+  {"artist":"Soft Cell","title":"Tainted Love"},
+  {"artist":"Eagles","title":"Take It Easy"},
+  {"artist":"Eddie Money","title":"Take Me Home Tonight"},
+  {"artist":"Steve Miller","title":"Take the Money and Run"},
+  {"artist":"Eric Clapton/Cream","title":"Tales of Brave Ulysses"},
+  {"artist":"CSNY","title":"Teach Your Children"},
+  {"artist":"Chris Stapleton","title":"Tennessee Whiskey"},
+  {"artist":"Elvis Presley","title":"That's Alright, Mama"},
+  {"artist":"Billy Currington","title":"That's How Country Boys Roll"},
+  {"artist":"Otis Redding","title":"That's How Strong My Love Is"},
+  {"artist":"Greg Kihn Band","title":"The Break-Up Song"},
+  {"artist":"Billy Joel","title":"The Entertainer"},
+  {"artist":"Kenny Rogers","title":"The Gambler"},
+  {"artist":"Steve Miller","title":"The Joker"},
+  {"artist":"The Who","title":"The Kids are Alright"},
+  {"artist":"Bruno Mars","title":"The Lazy Song"},
+  {"artist":"Joe Cocker","title":"The Letter"},
+  {"artist":"Joe Cocker/Box Tops","title":"The Letter"},
+  {"artist":"Billy Joel","title":"The Longest TIme"},
+  {"artist":"Jason Mraz","title":"The Remedy"},
+  {"artist":"The Band","title":"The Weight"},
+  {"artist":"Ed Sheeran","title":"Thinking out Loud"},
+  {"artist":"Elton John","title":"Tiny Dancer"},
+  {"artist":"Mr. Big","title":"To Be With You"},
+  {"artist":"Zac Brown","title":"Toes"},
+  {"artist":"Grateful Dead","title":"Truckin"},
+  {"artist":"Rolling Stones","title":"Tumbling Dice"},
+  {"artist":"Bob Seger","title":"Turn the Page"},
+  {"artist":"Spin Doctors","title":"Two Princes"},
+  {"artist":"Grateful Dead","title":"Uncle John's Band"},
+  {"artist":"The Band","title":"Up on Cripple Creek"},
+  {"artist":"Jack Johnson","title":"Upside Down"},
+  {"artist":"Bruno Mars","title":"Uptown Funk"},
+  {"artist":"Kings of Leon","title":"Use Somebody"},
+  {"artist":"Darius Rucker/Old Crow Med. Show","title":"Wagon Wheel"},
+  {"artist":"John Mayer","title":"Waiting on the World to Change"},
+  {"artist":"Avicii","title":"Wake Me Up"},
+  {"artist":"Ed Sheeran","title":"Wake Me Up"},
+  {"artist":"Marc Cohn","title":"Walking in Memphis"},
+  {"artist":"Bon Jovi","title":"Wanted Dead or Alive"},
+  {"artist":"Beatles","title":"We Can Work it Out"},
+  {"artist":"Billy Joel","title":"We Didn't Start the Fire"},
+  {"artist":"Louis Armstrong","title":"What A Wonderful World"},
+  {"artist":"Sublime","title":"What I Got"},
+  {"artist":"Romantics","title":"What I Like About You"},
+  {"artist":"Everlast","title":"What It's Like"},
+  {"artist":"U2","title":"Where the Streets Have No Name"},
+  {"artist":"Devo","title":"Whip It"},
+  {"artist":"Allman Bros.","title":"Whipping Post"},
+  {"artist":"Dubliners","title":"Whiskey in the Jar"},
+  {"artist":"Chris Stapleton","title":"White Horse"},
+  {"artist":"Eric Clapton/Cream","title":"White Room"},
+  {"artist":"Billy Idol","title":"White Wedding"},
+  {"artist":"CCR","title":"Who'll Stop the Rain"},
+  {"artist":"Rolling Stones","title":"Wild Horses"},
+  {"artist":"Van Morrison","title":"Wild Nights"},
+  {"artist":"Dubliners","title":"Wild Rover"},
+  {"artist":"Cat Stevens","title":"Wild World"},
+  {"artist":"Tom Petty","title":"Wildflowers"},
+  {"artist":"Terence Trent D'Arby","title":"Wishing Well"},
+  {"artist":"U2","title":"With our Without You"},
+  {"artist":"Tom Petty","title":"Won't Back Down"},
+  {"artist":"Eric Clapton/Cream","title":"Wonderful Tonight"},
+  {"artist":"Oasis","title":"Wonderwall"},
+  {"artist":"Gordon Lightfoot","title":"Wreck of the Edmund Fitzgerald"},
+  {"artist":"Beatles","title":"Yellow Submarine"},
+  {"artist":"Beatles","title":"Yesterday"},
+  {"artist":"Dave Matthews Band","title":"You and Me"},
+  {"artist":"Rolling Stones","title":"You Can't Always Get What You Want"},
+  {"artist":"Billy Joel","title":"You May Be Right"},
+  {"artist":"Pat McGuire Band","title":"You're So Beautiful"},
+  {"artist":"Beatles","title":"You've Got to Hide Your Love Away"},
+  {"artist":"The Outfield","title":"Your Love"},
+  {"artist":"Elton John","title":"Your Song"}
+];
+    const PHONE = "+15165211009";
+
+    const list = document.getElementById('songs');
+    const q = document.getElementById('q');
+    const countEl = document.getElementById('count');
+    const empty = document.getElementById('empty');
+
+    function render(items) {
+      list.innerHTML = "";
+      if (!items.length) {
+        empty.style.display = 'block';
+      } else {
+        empty.style.display = 'none';
+      }
+      for (const it of items) {
+        const li = document.createElement('li');
+        li.className = 'song';
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+
+        const title = document.createElement('div');
+        title.className = 'song-title';
+        title.textContent = it.title || '(Untitled)';
+
+        const artist = document.createElement('div');
+        artist.className = 'song-artist';
+        artist.textContent = it.artist || '';
+
+        const btn = document.createElement('button');
+        btn.className = 'req';
+        btn.textContent = 'Text Request';
+        btn.addEventListener('click', () => handleClick(it));
+
+        meta.appendChild(title);
+        meta.appendChild(artist);
+        li.appendChild(meta);
+        li.appendChild(btn);
+        list.appendChild(li);
+      }
+      countEl.textContent = `${items.length} songs`;
+    }
+
+    function handleClick(it) {
+      const text = it.artist ? `Song Request: ${it.title} by ${it.artist}` : `Song Request: ${it.title}`;
+      const body = encodeURIComponent(text);
+      const smsUrl = `sms:${PHONE}?&body=${body}`;
+      window.location.href = smsUrl;
+    }
+
+    function filter() {
+      const term = q.value.trim().toLowerCase();
+      if (!term) return render(ITEMS);
+      const filtered = ITEMS.filter(it =>
+        (it.title || '').toLowerCase().includes(term) ||
+        (it.artist || '').toLowerCase().includes(term)
+      );
+      render(filtered);
+    }
+
+    // Initial render; enable search
+    render(ITEMS);
+    q.addEventListener('input', filter);
+  </script>
+</body>
+</html>
